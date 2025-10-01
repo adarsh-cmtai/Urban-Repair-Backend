@@ -4,6 +4,7 @@ const Category = require('../models/category.model');
 const Service = require('../models/service.model');
 const SubService = require('../models/subService.model');
 const mongoose = require('mongoose');
+const Testimonial = require('../models/testimonial.model');
 
 router.get('/services-by-category', async (req, res) => {
     try {
@@ -100,6 +101,14 @@ router.get('/catalog/sub-services', async (req, res) => {
     }
 });
 
+router.get('/testimonials', async (req, res) => {
+    try {
+        const testimonials = await Testimonial.find({ isActive: true }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: testimonials });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
 
 
 module.exports = router;

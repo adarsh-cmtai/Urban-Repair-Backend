@@ -9,6 +9,7 @@ const technicianManagementRoutes = require('./technician.management.routes');
 const bookingManagementRoutes = require('./booking.management.routes');
 const dashboardManagementRoutes = require('./dashboard.management.routes');
 const blogManagementRoutes = require('./blog.management.routes');
+const testimonialRoutes = require('./testimonial.management.routes');
 
 router.use(verifyToken);
 router.use(isAdmin);
@@ -19,5 +20,6 @@ router.use('/customers', customerManagementRoutes);
 router.use('/technicians', technicianManagementRoutes);
 router.use('/bookings', bookingManagementRoutes);
 router.use('/blogs', blogManagementRoutes);
+router.use('/testimonials', testimonialRoutes);
 
 module.exports = router;

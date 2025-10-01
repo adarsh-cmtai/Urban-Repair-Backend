@@ -9,6 +9,7 @@ const technicianRoutes = require('./api/technician/technician.routes')
 const Blog = require('./models/blog.model');
 const publicRoutes = require('./api/public.routes');
 
+
 const app = express();
 
 
