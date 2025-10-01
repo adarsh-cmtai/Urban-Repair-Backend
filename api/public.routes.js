@@ -71,7 +71,7 @@ router.get('/config', (req, res) => {
 
 router.get('/catalog/categories', async (req, res) => {
     try {
-        const categories = await Category.find({ isActive: true });
+        const categories = await Category.find({ isActive: true }).select('name');
         res.status(200).json({ success: true, data: categories });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server Error' });
@@ -99,6 +99,7 @@ router.get('/catalog/sub-services', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
+
 
 
 module.exports = router;
