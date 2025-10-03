@@ -7,23 +7,16 @@ const getTechnicianProfile = async (req, res) => {
     try {
         const technicianId = new mongoose.Types.ObjectId(req.user.id);
         
-        const [technician, ratingData] = await Promise.all([
+        const [technician, ratingData, jobs] = await Promise.all([
             User.findById(req.user.id).select('-password'),
             Booking.aggregate([
-                { 
-                    $match: { 
-                        technicianId: technicianId,
-                        'review.rating': { $exists: true } 
-                    } 
-                },
-                {
-                    $group: {
-                        _id: '$technicianId',
-                        averageRating: { $avg: '$review.rating' },
-                        totalReviews: { $sum: 1 }
-                    }
-                }
-            ])
+                { $match: { technicianId: technicianId, 'review.rating': { $exists: true } } },
+                { $group: { _id: '$technicianId', averageRating: { $avg: '$review.rating' }, totalReviews: { $sum: 1 } } }
+            ]),
+            Booking.find({ technicianId: technicianId, 'review.rating': { $exists: true } })
+                .populate('customerId', 'name')
+                .sort({ updatedAt: -1 })
+                .select('review serviceType items customerId updatedAt')
         ]);
 
         if (!technician) {
@@ -33,6 +26,7 @@ const getTechnicianProfile = async (req, res) => {
         const profileData = technician.toObject();
         profileData.averageRating = ratingData.length > 0 ? parseFloat(ratingData[0].averageRating.toFixed(2)) : 0;
         profileData.totalReviews = ratingData.length > 0 ? ratingData[0].totalReviews : 0;
+        profileData.reviews = jobs;
 
         res.status(200).json({ success: true, data: profileData });
     } catch (error) {
