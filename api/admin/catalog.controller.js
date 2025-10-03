@@ -36,7 +36,7 @@ const createCategory = async (req, res) => {
 
 const getAllCategories = async (req, res) => {
     try {
-        const categories = await Category.find();
+        const categories = await Category.find({ isActive: true }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: categories });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -72,12 +72,12 @@ const createService = async (req, res) => {
 
 const getAllServices = async (req, res) => {
     const { categoryId } = req.query;
-    let query = {};
+    let query = { isActive: true };
     if (categoryId) query.categoryId = categoryId;
     try {
-        const services = await Service.find(query).populate('categoryId', 'name');
+        const services = await Service.find(query).populate('categoryId', 'name').sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: services });
-    } catch (error) {
+    } catch (error){
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -114,7 +114,7 @@ const getAllSubServices = async (req, res) => {
     let query = {};
     if (serviceId) query.serviceId = serviceId;
     try {
-        const subServices = await SubService.find(query).populate('serviceId', 'name');
+        const subServices = await SubService.find(query).populate('serviceId', 'name').sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: subServices });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -132,8 +132,9 @@ const updateSubService = async (req, res) => {
 
 const deleteSubService = async (req, res) => {
     try {
-        await SubService.findByIdAndUpdate(req.params.id, { isActive: false });
-        res.status(200).json({ success: true, message: 'Sub-service deactivated successfully' });
+        const deleted = await SubService.findByIdAndDelete(req.params.id);
+        if (!deleted) return res.status(404).json({ success: false, message: 'Sub-Service not found' });
+        res.status(200).json({ success: true, message: 'Sub-Service deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
