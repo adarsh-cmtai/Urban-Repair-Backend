@@ -60,19 +60,34 @@ const updateAddress = async (req, res) => {
 
 const deleteAddress = async (req, res) => {
     const { addressId } = req.params;
+
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user._id); // use _id
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const address = user.addresses.id(addressId);
         if (!address) {
             return res.status(404).json({ success: false, message: 'Address not found' });
         }
-        address.remove();
+
+        // Safely remove subdocument
+        user.addresses.pull({ _id: addressId });
         await user.save();
-        res.status(200).json({ success: true, message: 'Address deleted successfully', data: user.addresses });
+
+        res.status(200).json({
+            success: true,
+            message: 'Address deleted successfully',
+            data: user.addresses
+        });
     } catch (error) {
+        console.error("Delete Address Error:", error);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
+
 
 const changePassword = async (req, res) => {
     const { oldPassword, newPassword } = req.body;
