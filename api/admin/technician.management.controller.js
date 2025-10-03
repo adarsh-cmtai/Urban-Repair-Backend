@@ -39,9 +39,12 @@ const createTechnician = async (req, res) => {
 
 const getAllTechnicians = async (req, res) => {
     try {
-        const technicians = await User.find({ role: 'technician' })
-            .select('-password -addresses -__v')
-            .sort({ createdAt: -1 });
+        const technicians = await User.find({ 
+            role: 'technician',
+            isActive: true 
+        })
+        .select('-password -addresses -__v')
+        .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, count: technicians.length, data: technicians });
     } catch (error) {
