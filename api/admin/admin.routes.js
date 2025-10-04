@@ -10,6 +10,7 @@ const bookingManagementRoutes = require('./booking.management.routes');
 const dashboardManagementRoutes = require('./dashboard.management.routes');
 const blogManagementRoutes = require('./blog.management.routes');
 const testimonialRoutes = require('./testimonial.management.routes');
+const locationRoutes = require('./location.management.routes');
 
 router.use(verifyToken);
 router.use(isAdmin);
@@ -21,5 +22,6 @@ router.use('/technicians', technicianManagementRoutes);
 router.use('/bookings', bookingManagementRoutes);
 router.use('/blogs', blogManagementRoutes);
 router.use('/testimonials', testimonialRoutes);
+router.use('/locations', locationRoutes);
 
 module.exports = router;

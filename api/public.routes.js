@@ -5,6 +5,7 @@ const Service = require('../models/service.model');
 const SubService = require('../models/subService.model');
 const mongoose = require('mongoose');
 const Testimonial = require('../models/testimonial.model');
+const Location = require('../models/location.model');
 
 router.get('/services-by-category', async (req, res) => {
     try {
@@ -110,5 +111,40 @@ router.get('/testimonials', async (req, res) => {
     }
 });
 
+
+router.get('/locations/search', async (req, res) => {
+    const { query } = req.query;
+    if (!query) {
+        return res.status(400).json({ success: false, message: 'Search query is required.' });
+    }
+    try {
+        const searchRegex = new RegExp(query, 'i');
+
+        const locations = await Location.find({
+            $or: [
+                { areaName: { $regex: searchRegex } },
+                { city: { $regex: searchRegex } },
+                { district: { $regex: searchRegex } },
+                { state: { $regex: searchRegex } },
+                { pincode: { $regex: searchRegex } }
+            ],
+            isServiceable: true
+        });
+
+        res.status(200).json({ success: true, data: locations });
+    } catch (error) {
+        console.error("Location search error:", error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+router.get('/locations/list-areas', async (req, res) => {
+    try {
+        const locations = await Location.find({ isServiceable: true }).select('areaName').limit(10);
+        res.status(200).json({ success: true, data: locations.map(l => l.areaName) });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
 
 module.exports = router;
