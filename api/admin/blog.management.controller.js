@@ -1,4 +1,13 @@
 const Blog = require('../../models/blog.model');
+const { deleteFromS3 } = require('../../services/aws.s3.service');
+
+const extractKeyFromUrl = (url) => {
+  try {
+    return url.split('/').pop();
+  } catch {
+    return null;
+  }
+};
 
 const createBlog = async (req, res) => {
     try {
@@ -39,13 +48,21 @@ const updateBlog = async (req, res) => {
 };
 
 const deleteBlog = async (req, res) => {
-    try {
-        const deletedBlog = await Blog.findByIdAndDelete(req.params.id);
-        if (!deletedBlog) return res.status(404).json({ success: false, message: 'Blog not found' });
-        res.status(200).json({ success: true, message: 'Blog deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog)
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+
+    const imageKey = extractKeyFromUrl(blog.imageUrl);
+    if (imageKey) {
+      await deleteFromS3(imageKey);
     }
+
+    await Blog.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: 'Blog and image deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 module.exports = { createBlog, getAllBlogsForAdmin, getBlogById, updateBlog, deleteBlog };

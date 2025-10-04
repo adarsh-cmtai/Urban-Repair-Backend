@@ -36,4 +36,17 @@ const generateUploadUrl = async (fileType) => {
     };
 };
 
-module.exports = { generateUploadUrl };
+const deleteFromS3 = async (key) => {
+    const params = {
+        Bucket: bucketName,
+        Key: key,
+    };
+
+    try {
+        await s3.deleteObject(params).promise();
+    } catch (error) {
+        console.error("Error deleting from S3:", error);
+    }
+};
+
+module.exports = { generateUploadUrl, deleteFromS3 };

@@ -2,6 +2,15 @@ const Category = require('../../models/category.model');
 const Service = require('../../models/service.model');
 const SubService = require('../../models/subService.model');
 const { generateUploadUrl } = require('../../services/aws.s3.service');
+const { deleteFromS3 } = require('../../services/aws.s3.service');
+
+const extractKeyFromUrl = (url) => {
+    try {
+        return url.split('/').pop();
+    } catch {
+        return null;
+    }
+};
 
 const handleValidationError = (error, res) => {
     if (error.name === 'ValidationError') {
@@ -54,12 +63,21 @@ const updateCategory = async (req, res) => {
 
 const deleteCategory = async (req, res) => {
     try {
-        await Category.findByIdAndUpdate(req.params.id, { isActive: false });
-        res.status(200).json({ success: true, message: 'Category deactivated successfully' });
+        const category = await Category.findById(req.params.id);
+        if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
+        
+        const imageKey = extractKeyFromUrl(category.imageUrl);
+        if (imageKey) {
+            await deleteFromS3(imageKey);
+        }
+
+        await Category.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: 'Category deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 const createService = async (req, res) => {
     try {
@@ -93,8 +111,16 @@ const updateService = async (req, res) => {
 
 const deleteService = async (req, res) => {
     try {
-        await Service.findByIdAndUpdate(req.params.id, { isActive: false });
-        res.status(200).json({ success: true, message: 'Service deactivated successfully' });
+        const service = await Service.findById(req.params.id);
+        if (!service) return res.status(404).json({ success: false, message: 'Service not found' });
+
+        const imageKey = extractKeyFromUrl(service.imageUrl);
+        if (imageKey) {
+            await deleteFromS3(imageKey);
+        }
+
+        await Service.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: 'Service deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -132,8 +158,15 @@ const updateSubService = async (req, res) => {
 
 const deleteSubService = async (req, res) => {
     try {
-        const deleted = await SubService.findByIdAndDelete(req.params.id);
-        if (!deleted) return res.status(404).json({ success: false, message: 'Sub-Service not found' });
+        const subService = await SubService.findById(req.params.id);
+        if (!subService) return res.status(404).json({ success: false, message: 'Sub-Service not found' });
+        
+        const imageKey = extractKeyFromUrl(subService.imageUrl);
+        if (imageKey) {
+            await deleteFromS3(imageKey);
+        }
+
+        await SubService.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: 'Sub-Service deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
