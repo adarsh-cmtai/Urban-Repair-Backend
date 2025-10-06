@@ -3,6 +3,50 @@ const User = require('../../models/user.model');
 const crypto = require('crypto');
 const sendEmail = require('../../utils/sendEmail');
 
+
+const offerJobToTechnicians = async (req, res) => {
+    const { technicianIds } = req.body;
+    if (!technicianIds || !Array.isArray(technicianIds) || technicianIds.length === 0) {
+        return res.status(400).json({ success: false, message: 'An array of technician IDs is required.' });
+    }
+
+    try {
+        const completionOTP = crypto.randomInt(100000, 999999).toString();
+
+        const booking = await Booking.findByIdAndUpdate(
+            req.params.id,
+            { 
+                $addToSet: { offeredTo: { $each: technicianIds } },
+                status: 'Offered',
+                completionOTP: completionOTP 
+            },
+            { new: true }
+        ).populate('customerId', 'name email');
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+
+        if (booking.customerId && booking.customerId.email) {
+            const customer = booking.customerId;
+            const emailHtml = `<p>Your service OTP is: <b>${completionOTP}</b></p>`;
+            try {
+                await sendEmail({
+                    email: customer.email,
+                    subject: `Service OTP for Booking #${booking.bookingId || booking._id.toString().slice(-6)}`,
+                    html: emailHtml,
+                });
+            } catch (emailError) {
+                console.error("Failed to send OTP email:", emailError);
+            }
+        }
+        
+        res.status(200).json({ success: true, message: `Job offered to ${technicianIds.length} technician(s).`, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error while offering job.' });
+    }
+};
+
 const getAllBookings = async (req, res) => {
     const { status, technicianId, dateFrom, dateTo, search } = req.query;
     let query = {};
@@ -153,5 +197,6 @@ module.exports = {
     assignTechnician,
     updateBookingStatus,
     rescheduleBooking,
+    offerJobToTechnicians,
     deleteBooking,
 };

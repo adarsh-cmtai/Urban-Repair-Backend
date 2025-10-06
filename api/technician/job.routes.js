@@ -2,16 +2,18 @@ const express = require('express');
 const router = express.Router();
 
 const {
-    getTodaysJobs,
+    getTechnicianJobs,
     getJobHistory,
     getJobDetails,
     startJob,
     updateJobDetails,
     completeJob,
+    acceptJob,
     generateJobUploadUrl,
 } = require('./job.controller');
 
-router.get('/today', getTodaysJobs);
+router.get('/queue', getTechnicianJobs);
+router.patch('/:id/accept', acceptJob);
 router.get('/history', getJobHistory);
 
 router.get('/:id', getJobDetails);

@@ -15,44 +15,51 @@ const generateJobUploadUrl = async (req, res) => {
     }
 };  
 
-const getTodaysJobs = async (req, res) => {
+const getTechnicianJobs = async (req, res) => {
     try {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-
-        const todayEnd = new Date();
-        todayEnd.setHours(23, 59, 59, 999);
-
-        const todaysJobs = await Booking.find({
-            technicianId: req.user.id,
-            preferredDate: {
-                $gte: todayStart,
-                $lte: todayEnd
-            }
+        const technicianId = req.user.id;
+        const jobs = await Booking.find({
+            $or: [
+                { offeredTo: technicianId, status: 'Offered' },
+                { technicianId: technicianId, status: { $in: ['Accepted', 'InProgress', 'Rescheduled'] } }
+            ]
         })
-        .select('timeSlot serviceType address customerId status preferredDate')
         .populate('customerId', 'name')
         .sort({ preferredDate: 1, 'timeSlot': 1 });
 
-        const totalJobsToday = todaysJobs.length;
-        const nextJob = todaysJobs.find(job => job.status !== 'Completed') || null;
-
-        res.status(200).json({
-            success: true,
-            data: {
-                summary: {
-                    totalJobsToday,
-                    nextJob,
-                },
-                jobQueue: todaysJobs,
-            }
-        });
-
+        res.status(200).json({ success: true, data: { jobQueue: jobs } });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error while fetching today\'s jobs.' });
+        res.status(500).json({ success: false, message: 'Server error while fetching jobs.' });
     }
 };
 
+const acceptJob = async (req, res) => {
+    const { id: bookingId } = req.params;
+    const technicianId = req.user.id;
+
+    try {
+        const updatedBooking = await Booking.findOneAndUpdate(
+            { _id: bookingId, status: 'Offered' },
+            { 
+                $set: { 
+                    status: 'Accepted', 
+                    technicianId: technicianId,
+                    offeredTo: []
+                }
+            },
+            { new: true }
+        );
+
+        if (!updatedBooking) {
+            return res.status(409).json({ success: false, message: 'Sorry, this job has already been accepted by another technician.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Job accepted successfully!', data: updatedBooking });
+    } catch (error) {
+        console.error("ACCEPT JOB ERROR:", error);
+        res.status(500).json({ success: false, message: 'Server error while accepting job.' });
+    }
+};
 const getJobHistory = async (req, res) => {
     const { dateFrom, dateTo } = req.query;
     let query = { 
@@ -143,7 +150,8 @@ const completeJob = async (req, res) => {
 
 module.exports = {
     generateJobUploadUrl,
-    getTodaysJobs,
+    getTechnicianJobs,
+    acceptJob,
     getJobHistory,
     getJobDetails,
     startJob,

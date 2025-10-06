@@ -49,33 +49,24 @@ const bookingSchema = new mongoose.Schema({
     bookingId: { type: String, required: true, unique: true },
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     technicianId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    
-    // Fields for "Zomato-style" booking
+    offeredTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     items: [bookingItemSchema],
-    
-    // Fields for old booking system (for backward compatibility)
     serviceType: { type: String },
     applianceType: { type: String },
     problemDescription: { type: [String] },
-
     address: addressSubSchema,
     preferredDate: { type: Date, required: true },
     timeSlot: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['Pending', 'Confirmed', 'Assigned', 'InProgress', 'Completed', 'Cancelled', 'Rescheduled'], 
+        enum: ['Pending', 'Offered', 'Accepted', 'InProgress', 'Completed', 'Cancelled', 'Rescheduled'], 
         default: 'Pending' 
     },
-    
-    // Technician-added fields
     technicianNotes: { type: String, trim: true },
     beforeServiceImage: { type: String },
     afterServiceImage: { type: String },
     serviceCharge: { type: Number, default: 0 },
-
     review: reviewSchema,
-
-    // Payment fields
     totalAmount: { type: Number, required: true },
     discount: { type: Number, default: 0 },
     finalAmount: { type: Number, required: true },
@@ -85,7 +76,6 @@ const bookingSchema = new mongoose.Schema({
         orderId: String,
         paymentId: String,
     },
-
     completionOTP: { type: String, select: false },
 }, { timestamps: true });
 

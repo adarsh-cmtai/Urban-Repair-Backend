@@ -8,6 +8,7 @@ const {
     updateBookingStatus,
     rescheduleBooking,
     deleteBooking,
+    offerJobToTechnicians,
 } = require('./booking.management.controller');
 
 router.get('/', getAllBookings);
@@ -16,5 +17,6 @@ router.delete('/:id', deleteBooking);
 router.patch('/:id/assign', assignTechnician);
 router.patch('/:id/status', updateBookingStatus);
 router.patch('/:id/reschedule', rescheduleBooking);
+router.patch('/:id/offer', offerJobToTechnicians);
 
 module.exports = router;
