@@ -71,10 +71,11 @@ const bookingSchema = new mongoose.Schema({
     discount: { type: Number, default: 0 },
     finalAmount: { type: Number, required: true },
     paymentMethod: { type: String, enum: ['Online', 'COD'], required: true },
-    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partial', 'Failed'], default: 'Pending' },
+    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partial', 'Failed', 'Refunded'], default: 'Pending' },
     paymentDetails: {
         orderId: String,
         paymentId: String,
+        refundId: String,
     },
     completionOTP: { type: String, select: false },
 }, { timestamps: true });

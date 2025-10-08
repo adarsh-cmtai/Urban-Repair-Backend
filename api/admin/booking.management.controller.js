@@ -2,7 +2,13 @@ const Booking = require('../../models/booking.model');
 const User = require('../../models/user.model');
 const crypto = require('crypto');
 const sendEmail = require('../../utils/sendEmail');
+const Razorpay = require('razorpay');
 
+
+const instance = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 const offerJobToTechnicians = async (req, res) => {
     const { technicianIds } = req.body;
@@ -145,20 +151,79 @@ const assignTechnician = async (req, res) => {
 
 const updateBookingStatus = async (req, res) => {
     const { status } = req.body;
+    const { id: bookingId } = req.params;
+
     if (!status) {
         return res.status(400).json({ success: false, message: 'Status is required.' });
     }
-    const allowedStatuses = ['Pending', 'Confirmed', 'Assigned', 'InProgress', 'Completed', 'Cancelled', 'Rescheduled'];
-    if (!allowedStatuses.includes(status)) {
-        return res.status(400).json({ success: false, message: 'Invalid status provided.' });
-    }
+    
     try {
-        const booking = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        const booking = await Booking.findById(bookingId).populate('customerId', 'name email');
+
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found.' });
         }
-        res.status(200).json({ success: true, message: 'Booking status updated successfully.', data: booking });
+        
+        if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+            return res.status(400).json({ success: false, message: `This booking is already ${booking.status.toLowerCase()}.` });
+        }
+
+        if (status === 'Cancelled') {
+            if (booking.paymentMethod === 'Online' && booking.paymentStatus === 'Paid' && booking.paymentDetails?.paymentId) {
+                try {
+                    const refund = await instance.payments.refund(booking.paymentDetails.paymentId, {
+                        amount: booking.finalAmount * 100,
+                        speed: 'normal',
+                        notes: {
+                            reason: 'Booking cancelled by admin.',
+                            bookingId: booking.bookingId,
+                        }
+                    });
+
+                    booking.paymentStatus = 'Refunded';
+                    booking.paymentDetails.refundId = refund.id;
+
+                } catch (refundError) {
+                    console.error("Razorpay refund error:", refundError);
+                    return res.status(500).json({ success: false, message: 'Failed to process refund. Please try again or contact Razorpay support.' });
+                }
+            }
+            
+            if (booking.customerId && booking.customerId.email) {
+                const customer = booking.customerId;
+                const emailHtml = `
+                    <div style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h2>Booking Cancelled: #${booking.bookingId}</h2>
+                        <p>Hi ${customer.name},</p>
+                        <p>We are writing to inform you that your service booking with Urban Repair has been cancelled by our team.</p>
+                        ${booking.paymentMethod === 'Online' && booking.paymentStatus === 'Refunded' ? `
+                        <div style="background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 15px; margin: 15px 0;">
+                            <h3 style="margin-top: 0;">Refund Processed</h3>
+                            <p>A full refund of <strong>₹${booking.finalAmount.toLocaleString('en-IN')}</strong> has been initiated for your payment. It should reflect in your original payment method within 5-7 business days.</p>
+                            <p><strong>Refund ID:</strong> ${booking.paymentDetails.refundId}</p>
+                        </div>
+                        ` : ''}
+                        <p>We apologize for any inconvenience this may cause. If you have any questions, please feel free to contact our support team.</p>
+                    </div>`;
+
+                try {
+                    await sendEmail({
+                        email: customer.email,
+                        subject: `Important: Your Urban Repair Booking #${booking.bookingId} has been cancelled`,
+                        html: emailHtml,
+                    });
+                } catch (emailError) {
+                    console.error("Failed to send cancellation email:", emailError);
+                }
+            }
+        }
+        
+        booking.status = status;
+        await booking.save();
+        
+        res.status(200).json({ success: true, message: `Booking status updated to ${status}.`, data: booking });
     } catch (error) {
+        console.error("Update status error:", error);
         res.status(500).json({ success: false, message: 'Server error while updating status.' });
     }
 };
