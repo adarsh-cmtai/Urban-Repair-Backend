@@ -93,7 +93,7 @@ const getAllServices = async (req, res) => {
     let query = { isActive: true };
     if (categoryId) query.categoryId = categoryId;
     try {
-        const services = await Service.find(query).populate('categoryId', 'name').sort({ createdAt: -1 });
+        const services = await Service.find(query).populate('serviceableLocations', 'areaName pincode').sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: services });
     } catch (error){
         res.status(500).json({ success: false, message: error.message });

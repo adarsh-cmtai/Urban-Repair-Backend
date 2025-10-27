@@ -21,6 +21,7 @@ const serviceSchema = new mongoose.Schema({
     howItWorks: [stepSchema],
     faqs: [faqSchema],
     isActive: { type: Boolean, default: true },
+    serviceableLocations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
 }, { 
     timestamps: true,
     toJSON: { virtuals: true },
