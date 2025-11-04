@@ -6,6 +6,8 @@ const dashboardRoutes = require('./dashboard.routes');
 const { verifyToken } = require('../../middlewares/auth.middleware');
 const { isCustomer } = require('../../middlewares/role.middleware');
 const { createOrder, verifyPayment } = require('./payment.controller');
+const sellRequestRoutes = require('./sell.request.routes');
+const { getCustomerUploadUrl } = require('./upload.controller');
 
 /*
  * ===================================================================
@@ -46,6 +48,9 @@ router.get('/is-first-booking', async (req, res) => {
 
 router.post('/payment/create-order', createOrder);
 router.post('/payment/verify', verifyPayment);
+
+router.post('/uploads/generate-url', getCustomerUploadUrl);
+router.use('/sell-requests', sellRequestRoutes);
 
 // Yahan aap future me booking se related routes bhi add kar sakte hain.
 // Yeh routes bhi automatically upar diye gaye middlewares se protect ho jayenge.

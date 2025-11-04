@@ -7,6 +7,8 @@ const mongoose = require('mongoose');
 const Testimonial = require('../models/testimonial.model');
 const Location = require('../models/location.model');
 const NodeGeocoder = require('node-geocoder');
+const BuybackCategory = require('../models/buybackCategory.model');
+// const Service = require('../models/service.model');
 
 const geocoder = NodeGeocoder({
     provider: 'openstreetmap'
@@ -216,5 +218,62 @@ router.get('/locations/list-areas', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
+
+router.get('/buyback-services', async (req, res) => {
+    try {
+        const services = await Service.find({ type: 'Sell', isActive: true })
+            .populate('categoryId', 'name');
+        res.status(200).json({ success: true, data: services });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+router.get('/buyback-catalog-full', async (req, res) => {
+    try {
+        const { locationId } = req.query;
+
+        let brandMatchCondition = { isActive: true };
+        if (locationId && mongoose.Types.ObjectId.isValid(locationId)) {
+            brandMatchCondition = {
+                ...brandMatchCondition,
+                $or: [
+                    { serviceableLocations: { $size: 0 } },
+                    { serviceableLocations: new mongoose.Types.ObjectId(locationId) }
+                ]
+            };
+        }
+
+        const fullCatalog = await BuybackCategory.aggregate([
+            { $match: { isActive: true } },
+            {
+                $lookup: {
+                    from: 'buybackcapacities',
+                    localField: '_id',
+                    foreignField: 'categoryId',
+                    as: 'capacities',
+                    pipeline: [
+                        { $match: { isActive: true } },
+                        {
+                            $lookup: {
+                                from: 'buybackbrands',
+                                localField: '_id',
+                                foreignField: 'capacityId',
+                                as: 'brands',
+                                pipeline: [{ $match: brandMatchCondition }]
+                            }
+                        },
+                        { $match: { "brands.0": { "$exists": true } } }
+                    ]
+                }
+            },
+            { $match: { "capacities.0": { "$exists": true } } }
+        ]);
+        res.status(200).json({ success: true, data: fullCatalog });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
 
 module.exports = router;
