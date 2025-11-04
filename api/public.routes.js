@@ -8,11 +8,11 @@ const Testimonial = require('../models/testimonial.model');
 const Location = require('../models/location.model');
 const NodeGeocoder = require('node-geocoder');
 const BuybackCategory = require('../models/buybackCategory.model');
-// const Service = require('../models/service.model');
 
 const geocoder = NodeGeocoder({
     provider: 'openstreetmap',
-    userAgent: 'Urban Repair App / 1.0', 
+    userAgent: 'Urban Repair App / 1.0',
+    timeout: 7000, 
 });
 
 router.get('/locations/by-pincode', async (req, res) => {
@@ -54,7 +54,7 @@ router.get('/locations/by-coords', async (req, res) => {
         return res.status(404).json({ success: false, message: 'Sorry, your current location is not serviceable.' });
 
     } catch (error) {
-        console.error("Reverse geocoding error:", error);
+        console.error("Reverse geocoding error on Vercel:", error);
         res.status(500).json({ success: false, message: 'Could not determine location from coordinates.' });
     }
 });
