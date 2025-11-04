@@ -11,7 +11,8 @@ const BuybackCategory = require('../models/buybackCategory.model');
 // const Service = require('../models/service.model');
 
 const geocoder = NodeGeocoder({
-    provider: 'openstreetmap'
+    provider: 'openstreetmap',
+    userAgent: 'Urban Repair App / 1.0', 
 });
 
 router.get('/locations/by-pincode', async (req, res) => {
