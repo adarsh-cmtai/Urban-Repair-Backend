@@ -9,54 +9,53 @@ const Location = require('../models/location.model');
 const NodeGeocoder = require('node-geocoder');
 const BuybackCategory = require('../models/buybackCategory.model');
 
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
 const geocoder = NodeGeocoder({
-    provider: 'openstreetmap',
-    userAgent: 'Urban Repair App / 1.0',
-    timeout: 7000, 
+  provider: 'openstreetmap',
+  fetch: (url, options) => import('node-fetch').then(({ default: fetch }) => fetch(url, { ...options, timeout: 7000 })),
+  userAgent: 'UrbanRepair/1.0 (https://www.urbanrepairexpert.in)',
 });
 
 router.get('/locations/by-pincode', async (req, res) => {
-    const { pincode } = req.query;
-    if (!pincode) {
-        return res.status(400).json({ success: false, message: 'Pincode is required.' });
-    }
-    try {
-        const locations = await Location.find({ pincode, isServiceable: true });
-        if (locations && locations.length > 0) {
-            return res.status(200).json({ success: true, data: locations });
-        }
-        return res.status(404).json({ success: false, message: 'No serviceable locations found for this pincode.' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error while searching by pincode.' });
-    }
+  const { pincode } = req.query;
+  if (!pincode) return res.status(400).json({ success: false, message: 'Pincode is required.' });
+
+  try {
+    const locations = await Location.find({ pincode, isServiceable: true });
+    if (locations.length > 0) return res.status(200).json({ success: true, data: locations });
+    return res.status(404).json({ success: false, message: 'No serviceable locations found for this pincode.' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Server error while searching by pincode.' });
+  }
 });
 
-
 router.get('/locations/by-coords', async (req, res) => {
-    const { lat, lon } = req.query;
+  const { lat, lon } = req.query;
+  if (!lat || !lon) return res.status(400).json({ success: false, message: 'Latitude and longitude are required.' });
 
-    if (!lat || !lon) {
-        return res.status(400).json({ success: false, message: 'Latitude and longitude are required.' });
+  try {
+    const geoResult = await geocoder.reverse({ lat: parseFloat(lat), lon: parseFloat(lon) });
+
+    if (geoResult && geoResult.length > 0 && geoResult[0].zipcode) {
+      const pincode = geoResult[0].zipcode;
+      const locations = await Location.find({ pincode, isServiceable: true });
+      if (locations.length > 0) return res.status(200).json({ success: true, data: locations });
+    } else {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const data = await response.json();
+      if (data && data.address && data.address.postcode) {
+        const pincode = data.address.postcode;
+        const locations = await Location.find({ pincode, isServiceable: true });
+        if (locations.length > 0) return res.status(200).json({ success: true, data: locations });
+      }
     }
 
-    try {
-        const geoResult = await geocoder.reverse({ lat: parseFloat(lat), lon: parseFloat(lon) });
-
-        if (geoResult && geoResult.length > 0 && geoResult[0].zipcode) {
-            const pincode = geoResult[0].zipcode;
-            const locations = await Location.find({ pincode, isServiceable: true });
-
-            if (locations && locations.length > 0) {
-                return res.status(200).json({ success: true, data: locations });
-            }
-        }
-        
-        return res.status(404).json({ success: false, message: 'Sorry, your current location is not serviceable.' });
-
-    } catch (error) {
-        console.error("Reverse geocoding error on Vercel:", error);
-        res.status(500).json({ success: false, message: 'Could not determine location from coordinates.' });
-    }
+    return res.status(404).json({ success: false, message: 'Sorry, your current location is not serviceable.' });
+  } catch (error) {
+    console.error('Reverse geocoding error on Vercel:', error);
+    res.status(500).json({ success: false, message: 'Could not determine location from coordinates.' });
+  }
 });
 
 router.get('/services-by-category', async (req, res) => {
